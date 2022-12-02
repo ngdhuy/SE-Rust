@@ -8,10 +8,15 @@ SEstudio - Hello Rust
 # RUST BASIC Syntax
 
 ## First app - Hello word
+
 This is the source code of the traditional Hello world program
 
+Create two directories with: 
+* **src** to store source code Rust.
+* **bin** to store binary file after Rust compile.
+
 ```rust
-// hello.rs
+// ./src/hello.rs
 fn main() {
   println!("Hello world!!!");
 }
@@ -22,12 +27,12 @@ fn main() {
 A binary can be generated using the Rust compiler: **rustc**
 
 ```shell
-$ rustc hello.rs
+$ rustc ./src/hello.rs -o ./bin/hello
 ```
 
 **rustc** will produce a hello binary that can be executed. 
 
 ```shell
-$ ./hello
+$ ./bin/hello
 Hello world!!!
 ```
