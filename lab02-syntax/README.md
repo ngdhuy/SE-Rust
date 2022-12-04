@@ -3686,6 +3686,260 @@ called rary's `indirect_access()`, that
 
 ## **12 - Cargo**
 
+```cargo``` is the official Rust package management tool. It has lots of really useful features to improve code quality and developer velocity! The include. 
+
+* Dependency management and integration with [crates.io](https://crates.io) (the official Rust package registry). 
+* Awareness of unit tests. 
+* Awareness of benchmarks.
+
+This chapter will go through some quick basics, but you can find the comprehensive docs in [The Cargo Book](https://doc.rust-lang.org/cargo/)
+
+### ***12.1 - Dependencies***
+
+Most programs have dependencies on some libraries. If you have ever managed dependencies by hand, you know how much of a pain this can be. Luckily, the Rust ecosystem comes standard with ```cargo```! ```cargo``` can mange dependencies for a project.
+
+To create a new Rust project
+
+```shell
+# A binary
+cargo new foo
+
+# OR A library
+cargo new --lib foo
+```
+
+For the rest of this chapter, let's assume we are making a binary, rather than a library, but all of the concepts are the same. 
+
+After the above commands, you should see a file hierarchy like this: 
+
+```shell
+foo
+├── Cargo.toml
+└── src
+    └── main.rs
+```
+
+The ```main.rs``` is the root source file for your new project -- nothing new there. The ```Cargo.toml``` is the config file for ```cargo``` fro this project (```foo```). If you look inside it, you should see something like this: 
+
+```toml
+[package]
+name = "foo"
+version = "0.1.0"
+authors = ["mark"]
+
+[dependencies]
+```
+
+The ```name``` field under ```[package]``` determines the name of the project. This is used by ```crates.io``` if you public the crate (more later). It is also the name of the output binary when you compile. 
+
+The ```version``` field is a crate version number using [Semantic Versioning](https://semver.org)
+
+The ```authors``` field is a list of authors used when publishing the crate. 
+
+The ```[dependencies]``` section lets you add dependencies for your project.
+
+For example, suppose that we want out program to have a great CLI. You can find lots of great packages on ```crates.io``` (the official Rust package registry). One popular choice is ```clap```. As of this writing, the most recent published version of ```clap``` is ```2.27.1```. To add a dependency to our program, we can simply add the following to our ```Cargo.toml``` under ```[dependencies]: clap = "2.27.1"```. And that's it! You can start using ```clap``` in our program.
+
+```cargo``` also supports ```other types of dependencies```. Here is just a small smapling:
+
+```toml
+[package]
+name = "foo"
+version = "0.1.0"
+authors = ["mark"]
+
+[dependencies]
+clap = "2.27.1" # from crates.io
+rand = { git = "https://github.com/rust-lang-nursery/rand" } # from online repo
+bar = { path = "../bar" } # from a path in the local filesystem
+```
+
+```cargo``` is more than a dependency manager. All of the available configuration options are listed in the [format specification](https://doc.rust-lang.org/cargo/reference/manifest.html) of ```Cargo.toml```
+
+To build our project we can execute ```cargo build``` anywhere in the project director (including subdirectories!). We can also do ```cargo run``` to build and run. Notice that these commands will resolve all dependencies, download crates if needed, and build everything, including your crate. (Note that it only rebuilds what it has not already built, similar to ```make```). 
+
+Voila! That's all there is to it!
+
+### ***12.2 - Conventions***
+
+In the previous chapter, we saw the following directory hierarchy: 
+
+```shell
+foo
+├── Cargo.toml
+└── src
+    └── main.rs
+```
+
+Suppose that we wanted to have two binaries in the same project, though. What then?
+
+It turns out that ```cargo``` supports this. The default binary name is ```main```, as we saw before, but you can add additional by placing them in a ```bin/``` directory:
+
+```shell
+foo
+├── Cargo.toml
+└── src
+    ├── main.rs
+    └── bin
+        └── my_other_bin.rs
+```
+
+To tell ```cargo``` to compile or run this binary as opposed to the default or other binaries, we just pass ```cargo``` the ```--bin my_other_bin``` flag, where ```my_other_bin``` is the name of the binary we want to work with. 
+
+In addition to extra binaries, ```cargo``` supports [more features](https://doc.rust-lang.org/cargo/guide/project-layout.html) such as benchmarks, tests, and example.
+
+In the next chapter, we will look more closely at tests.
+### ***12.3 - Tests***
+
+As we know testing is integral to piece of software! Rust has first-class support for unit and integration testing ([see this chapter](https://doc.rust-lang.org/book/ch11-00-testing.html) in TRPL).
+
+From the testing chapters linked above, we see how to write unit tests and integration tests. Organizationally, we can place unit tests in the modules they test and integration tests in their own ```test/``` directory:
+
+```shell
+foo
+├── Cargo.toml
+├── src
+│   └── main.rs
+│   └── lib.rs
+└── tests
+    ├── my_test.rs
+    └── my_other_test.rs
+```
+
+Each file in ```tests``` is a separate ```integration test```, i.e. a test that is meant to test your library as if it were being called from a dependent crate. 
+
+The Testing chapter elaborates on the three different testing styles: Unit, Doc and Integration. 
+
+```cargo``` naturally provides an easy way to run all of your test!
+
+```shell
+$ cargo test
+```
+
+You should see output like this;
+
+```shell
+$ cargo test
+   Compiling blah v0.1.0 (file:///nobackup/blah)
+    Finished dev [unoptimized + debuginfo] target(s) in 0.89 secs
+     Running target/debug/deps/blah-d3b32b97275ec472
+
+running 3 tests
+test test_bar ... ok
+test test_baz ... ok
+test test_foo_bar ... ok
+test test_foo ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+```
+
+One word of caution: Cargo may run multiple tests concurently, so make sure that they don't race with each other.
+
+One example of this concurency causing issues is if two tests output to a file, such as below:
+
+```rust
+#![allow(unused)]
+fn main() {
+    #[cfg(test)]
+    mod tests {
+        // Import the necessary modules
+        use std::fs::OpenOptions;
+        use std::io::Write;
+
+        // This test writes to a file
+        #[test]
+        fn test_file() {
+            // Opens the file ferris.txt or creates one if it doesn't exist.
+            let mut file = OpenOptions::new()
+                .append(true)
+                .create(true)
+                .open("ferris.txt")
+                .expect("Failed to open ferris.txt");
+
+            // Print "Ferris" 5 times.
+            for _ in 0..5 {
+                file.write_all("Ferris\n".as_bytes())
+                    .expect("Could not write to ferris.txt");
+            }
+        }
+
+        // This test tries to write to the same file
+        #[test]
+        fn test_file_also() {
+            // Opens the file ferris.txt or creates one if it doesn't exist.
+            let mut file = OpenOptions::new()
+                .append(true)
+                .create(true)
+                .open("ferris.txt")
+                .expect("Failed to open ferris.txt");
+
+            // Print "Corro" 5 times.
+            for _ in 0..5 {
+                file.write_all("Corro\n".as_bytes())
+                    .expect("Could not write to ferris.txt");
+            }
+        }
+    }
+}
+```
+
+Although the intent is to get the following
+
+```shell
+$ cat ferris.txt
+Ferris
+Ferris
+Ferris
+Ferris
+Ferris
+Corro
+Corro
+Corro
+Corro
+Corro
+```
+
+What actually gets put into ```ferris.txt``` is this
+
+```shell
+$ cargo test test_foo
+Corro
+Ferris
+Corro
+Ferris
+Corro
+Ferris
+Corro
+Ferris
+Corro
+Ferris
+```
+
+### ***12.4 - Build Scripts***
+
+**Buld Scripts**
+
+Sometimes a normal build from ```cargo``` is not enough. Perhaps your crate needs some pre-requisites before ```cargo``` will successfully compile, thiings like code generation, or some antive code that needs to be compiled. To solve this problem we have build scripts that Cargo can run.
+
+To add a build script to your package it can either be specified in the ```Cargo.toml``` as follows: 
+
+```toml
+[package]
+...
+build = "build.rs"
+```
+Otherwise Cargo will look for a ```build.rs``` file in the project directory by default.
+
+**How to use a build script**
+
+The build script is simply another Rust file that will be compiled and invoked prior to compiling anything else in the package. Hence it can be used to fulfill pre-requisites of your crate. 
+
+Cargo provides the script with inputs via environment variables specified here that can be used. 
+
+The script provides output via stdout. All lines printed are written to ```target/debug/build/<pkg>/output```. Further, lines prefixed with ```cargo:``` will be interpreted by Cargo directly and hence can be used to define parameters for the package's compilation. 
+
+For further specification and example have a read of the [Cargo specifilecation](https://doc.rust-lang.org/cargo/reference/build-scripts.html)
+
 ## **13 - Attributes**
 
 ## **14 - Generics**
