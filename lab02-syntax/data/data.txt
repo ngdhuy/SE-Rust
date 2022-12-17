@@ -1,0 +1,2 @@
+Hell world!!!
+This is the first Rust application.
