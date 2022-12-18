@@ -10853,3 +10853,145 @@ fn main() {
 ```
 
 ## **24 - Meta**
+
+Some topics aren't exactly relevant to how you program but provide you tooling or infrastructure support which just makes things better for everyone. These topics include:
+
+* ```Documentation```: Generate library documentation for users via the included ```rustdoc```.
+* ```Playground```: Integrate the Rust Playground in your documentation.
+
+### ***24.1 - Documentation***
+
+Use ```cargo doc``` to build documentation in ```target/doc```.
+
+Use ```cargo test``` to run all tests (including documentation tests), and ```cargo test --doc``` to only run documentation tests.
+
+These commands will appropriately invoke ```rustdoc``` (and ```rustc```) as required.
+
+**Doc comments**
+
+Doc comments are very useful for big projects that require documentation. When running ```rustdoc```, these are the comments that get compiled into documentation. They are denoted by a ```///,``` and support ```Markdown```.
+
+```rust
+#![crate_name = "doc"]
+
+/// A human being is represented here
+pub struct Person {
+    /// A person must have a name, no matter how much Juliet may hate it
+    name: String,
+}
+
+impl Person {
+    /// Returns a person with the name given them
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - A string slice that holds the name of the person
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// // You can have rust code between fences inside the comments
+    /// // If you pass --test to `rustdoc`, it will even test it for you!
+    /// use doc::Person;
+    /// let person = Person::new("name");
+    /// ```
+    pub fn new(name: &str) -> Person {
+        Person {
+            name: name.to_string(),
+        }
+    }
+
+    /// Gives a friendly hello!
+    ///
+    /// Says "Hello, [name](Person::name)" to the `Person` it is called on.
+    pub fn hello(& self) {
+        println!("Hello, {}!", self.name);
+    }
+}
+
+fn main() {
+    let john = Person::new("John");
+
+    john.hello();
+}
+```
+
+To run the tests, first build the code as a library, then tell rustdoc where to find the library so it can link it into each doctest program:
+
+```shell
+$ rustc doc.rs --crate-type lib
+$ rustdoc --test --extern doc="libdoc.rlib" doc.rs
+```
+
+**Doc attributes**
+
+Below are a few examples of the most common ```#[doc]``` attributes used with ```rustdoc```.
+
+***```inline```***
+
+Used to inline docs, instead of linking out to separate page.
+
+```rust
+#[doc(inline)]
+pub use bar::Bar;
+
+/// bar docs
+mod bar {
+    /// the docs for Bar
+    pub struct Bar;
+}
+```
+
+***```no_inline```***
+
+Used to prevent linking out to separate page or anywhere.
+
+```rust
+// Example from libcore/prelude
+#[doc(no_inline)]
+pub use crate::mem::drop;
+```
+
+***```hidden```***
+
+Using this tells ```rustdoc``` not to include this in documentation:
+
+```rust
+// Example from the futures-rs library
+#[doc(hidden)]
+pub use self::async_await::*;
+```
+
+For documentation, rustdoc is widely used by the community. It's what is used to generate the ```std library docs```.
+
+### ***24.2 - Playground***
+
+The ```Rust Playground``` is a way to experiment with Rust code through a web interface.
+
+**Using it with mdbook**
+
+In ```mdbook```, you can make code examples playable and editable.
+
+```rust
+fn main() {
+    println!("Hello World!");
+}
+```
+
+This allows the reader to both run your code sample, but also modify and tweak it. The key here is the adding the word editable to your codefence block separated by a comma.
+
+```
+```rust,editable
+//...place your code here
+```
+
+
+Additionally, you can add ```ignore``` if you want ```mdbook``` to skip your code when it builds and tests.
+
+```shell
+```rust,editable,ignore
+//...place your code here
+```
+**Using it with docs**
+
+You may have noticed in some of the ```official Rust docs``` a button that says "Run", which opens the code sample up in a new tab in Rust Playground. This feature is enabled if you use the ```#[doc]``` attribute called ```html_playground_url```.
